@@ -6,7 +6,10 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 
 class Config(object):
-    pass
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+    MARKDOWN_FILE_PATH = os.environ.get("MARKDOWN_FILE_PATH")
+    QDRANT_URL = os.environ.get("QDRANT_URL")
+    QDRANT_API = os.environ.get("QDRANT_API")
 
 
 class DevelopmentConfig(Config):
