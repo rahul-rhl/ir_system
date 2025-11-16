@@ -28,11 +28,9 @@ def initialize_index_markdown() -> object:
         api_key=Config_is.GEMINI_API_KEY,
         temperature=0.3
     )
-
     embed_model = HuggingFaceEmbedding(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
-
     Settings.llm = llm
     Settings.embed_model = embed_model
     node_parser = MarkdownNodeParser(h1=True, include_metadata=True)
@@ -49,8 +47,36 @@ def initialize_index_markdown() -> object:
             metadata={"source": file_path, "file_type": "markdown"}
         )
 
-        nodes = node_parser.get_nodes_from_documents([document])
+        qdrant_client = QdrantClient(
+            url=Config_is.QDRANT_URL,
+            api_key=Config_is.QDRANT_API
+        )
 
+        vector_store = QdrantVectorStore(
+            client=qdrant_client,
+            collection_name=collection_name
+        )
+
+        if qdrant_client.collection_exists(collection_name):
+            print("✔ Qdrant collection found — loading existing index.")
+            storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+            index = VectorStoreIndex.from_vector_store(
+                vector_store=vector_store,
+                storage_context=storage_context,
+                llm=llm,
+                embed_model=embed_model
+            )
+
+            return index
+        print("⚠ Qdrant collection missing — creating and embedding documents.")
+
+        qdrant_client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+        )
+
+        nodes = node_parser.get_nodes_from_documents([document])
         for node in nodes:
             first_line = node.text.strip().split('\n')[0] if node.text else ""
             match = re.match(r'^(#{1,6})\s+(.+)$', first_line)
@@ -63,28 +89,7 @@ def initialize_index_markdown() -> object:
                     "section_type": f"h{level}",
                 })
 
-        qdrant_client = QdrantClient(
-            url=Config_is.QDRANT_URL,
-            api_key=Config_is.QDRANT_API
-        )
-
-        if not qdrant_client.collection_exists(collection_name):
-            qdrant_client.create_collection(
-                collection_name=collection_name,
-                vectors_config=VectorParams(
-                    size=384,
-                    distance=Distance.COSINE
-                )
-            )
-
-        vector_store = QdrantVectorStore(
-            client=qdrant_client,
-            collection_name=collection_name
-        )
-
-        storage_context = StorageContext.from_defaults(
-            vector_store=vector_store
-        )
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
         index = VectorStoreIndex(
             nodes,
@@ -93,12 +98,10 @@ def initialize_index_markdown() -> object:
             embed_model=embed_model,
             show_progress=True
         )
-
         return index
 
     except Exception as e:
         raise Exception(f"Error initializing index from markdown file: {str(e)}")
-
 
 def initialize_agent():
     index = initialize_index_markdown()
@@ -116,7 +119,7 @@ def initialize_agent():
         include_metadata=True,
         node_postprocessors=[]
     )
-    
+
     tool = QueryEngineTool.from_defaults(
         query_engine,
         name="rag_tool",
