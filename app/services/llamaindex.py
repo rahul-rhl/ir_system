@@ -58,7 +58,7 @@ def initialize_index_markdown() -> object:
         )
 
         if qdrant_client.collection_exists(collection_name):
-            print("✔ Qdrant collection found — loading existing index.")
+            print("Qdrant collection found — loading existing index.")
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
             index = VectorStoreIndex.from_vector_store(
@@ -69,7 +69,7 @@ def initialize_index_markdown() -> object:
             )
 
             return index
-        print("⚠ Qdrant collection missing — creating and embedding documents.")
+        print("Qdrant collection missing — creating and embedding documents.")
 
         qdrant_client.create_collection(
             collection_name=collection_name,
