@@ -121,8 +121,6 @@ The application will be available at `http://127.0.0.1:5000/v1/ask`
 
 **Description**: Submit a question and receive an AI-generated answer based on WHO malaria guidelines.
 
-**See the Qdrant vector**: http://localhost:6333/dashboard#/collections/inerg_ir_syetm_collection
-
 #### POST Request
 
 ```bash
